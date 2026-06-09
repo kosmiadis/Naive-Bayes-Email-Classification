@@ -41,11 +41,6 @@ class NaiveBayesModel {
             std::regex punctuation_regex("!|@|#|$|%|^|&|*|(|)|,|.|?");
             std::string str = std::regex_replace(content, punctuation_regex, "");
 
-            /*
-                Objective Tokenization:
-                    splitting string into words with sstream lib using stringstream
-            */
-
             //first create a string stream with the input string as argument
             std::stringstream stream(str);
 
