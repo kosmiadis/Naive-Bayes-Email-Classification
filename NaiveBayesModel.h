@@ -18,10 +18,6 @@ struct TrainingData {
     CLASSIFICATION belong_class;
 };
 
-/*
-    ex. { "Hello world", CLASSIFICATION::NO_SPAM }, { "Free offer!", CLASSIFICATION::SPAM } 
-*/
-
 //for this implementation of the algorithm we only need the emails content thus
 //we define the PredictionData struct as input to predication
 struct PredictionData {
@@ -29,7 +25,7 @@ struct PredictionData {
 };
 
 struct Prediction {
-    double propabillity;
+    double probability;
     CLASSIFICATION classification;
     string message;
 };
@@ -44,9 +40,11 @@ class NaiveBayesModel {
         
         std::map<std::string, int> spam_vocabulary;
         long spam_vocabulary_size;
+        long spam_vocabulary_words_count;
         
         std::map<std::string, int> no_spam_vocabulary;
         long no_spam_vocabulary_size;
+        long no_spam_vocabulary_words_count;
     public:
 
         NaiveBayesModel() {
@@ -55,6 +53,8 @@ class NaiveBayesModel {
             this->dataset_size = 0;
             this->spam_vocabulary_size = 0;
             this->no_spam_vocabulary_size = 0;
+            this->spam_vocabulary_words_count = -1;
+            this->no_spam_vocabulary_words_count = -1;
         }
 
         //tokenize removes punctuation transforms to lowercase and splits words
@@ -97,39 +97,54 @@ class NaiveBayesModel {
                     words.push_back(w);
                 }
             }
-
             return words;
         }
 
         long getSpamTotalWordsCount () {  
             long count = 0;
-            for (auto word: spam_vocabulary) {
-                count += word.second;
+            //memoizing this->spam_vocabulary_words_count value once calculated as dataset wont change
+            if (this->spam_vocabulary_words_count == -1) {
+                for (auto word: spam_vocabulary) {
+                    count += word.second;
+                }   
+                this->spam_vocabulary_words_count = count;
             }
-
+            else {
+                count = this->spam_vocabulary_words_count;
+            }
             return count;
+            
         }
 
         long getNoSpamTotalWordsCount () {  
             long count = 0;
-            for (auto word: no_spam_vocabulary) {
-                count += word.second;
+            //memoizing this->no_spam_vocabulary_words_count value once calculated as dataset wont change
+            if (this->no_spam_vocabulary_words_count == -1) {
+                for (auto word: no_spam_vocabulary) {
+                    count += word.second;
+                }   
+                this->no_spam_vocabulary_words_count = count;
             }
-
+            else {
+                count = this->no_spam_vocabulary_words_count;
+            }
             return count;
         }
 
         //propabillity that a word belongs to spam email
         double getTokenSpamScore(const string &token) {
-
             int token_freq = spam_vocabulary[token];
-            return (double) token_freq+1.0 / (getSpamTotalWordsCount() + (getSpamTotalWordsCount()+getNoSpamTotalWordsCount()));
+
+            //apply laplace smoothing formula: (nominator + 1) / spam_words + all_unique_words
+            return (double) (token_freq + 1) / (getSpamTotalWordsCount() + (spam_vocabulary.size() + no_spam_vocabulary.size()));
         }   
 
         //propabillity that a word belongs to no-spam email
         double getTokenNoSpamScore (const string &token) {
             int token_freq = no_spam_vocabulary[token];
-            return (double) token_freq+1.0 / (getNoSpamTotalWordsCount() + (getSpamTotalWordsCount()+getNoSpamTotalWordsCount()));
+
+            //apply laplace smoothing formula: (nominator + 1) / no_spam_words + all_unique_words
+            return (double) (token_freq + 1) / (getNoSpamTotalWordsCount() + (spam_vocabulary.size() + no_spam_vocabulary.size()));
         }
 
 
@@ -146,27 +161,17 @@ class NaiveBayesModel {
                 if (i.belong_class == CLASSIFICATION::SPAM) {
                     this->spam_emails_count +=1;
 
+                    //increase word frequency for spam_vocabulary
                     for (string str: tokens) {
-                        //if word has not been counted yet do so
-                        if (!spam_vocabulary[str]) {
-                            spam_vocabulary.insert({ str, 0 });
-                            this->spam_vocabulary_size += 1;
-                        }
-                        
                         spam_vocabulary[str] = spam_vocabulary[str] + 1;
                     }
                 }
-                
                 //store word frequencies for no_spam_vocabulary
                 else {
-
                     this->no_spam_emails_count +=1;
+
+                    //increase word frequency for no_spam_vocabulary
                     for (string str: tokens) {
-                        //if word has not been counted yet do so
-                        if (!no_spam_vocabulary[str]) {
-                            no_spam_vocabulary.insert({ str, 0 });
-                            this->no_spam_vocabulary_size += 1;
-                        }
                         no_spam_vocabulary[str] = no_spam_vocabulary[str] + 1;
                     }
                 }
@@ -179,36 +184,39 @@ class NaiveBayesModel {
             double spam_pos = (double) this->spam_emails_count / this->dataset_size;
             double no_spam_pos = (double) this->no_spam_emails_count / this->dataset_size;
 
-            //starting from 1 because multiplication follows and initial value cannot be 0
-            double spamScore = 1;
-            double noSpamScore = 1;
+            //initializing scores with base case as follows P(spam) | P(no_spam) but logarithmic
+            double spamScore = std::log(spam_pos);
+            double noSpamScore = std::log(no_spam_pos);
 
+            //split words and for each word check spam and no-spam scoring
             std::vector<std::string> tokens = tokenize(toPredictData.content);
-
             for (string token : tokens) {
-                spamScore *= getTokenSpamScore(token);
+                spamScore += std::log(getTokenSpamScore(token));
             }
 
             for (string token : tokens) {
-                noSpamScore *= getTokenNoSpamScore(token);
+                noSpamScore += std::log(getTokenNoSpamScore(token));
             }
 
-            double totalSpamScore = spamScore / (spamScore + noSpamScore);
-            double totalNoSpamScore = noSpamScore / (spamScore + noSpamScore);
-
-            // std::cout << "Total Spam Score: " << totalSpamScore << std::endl << "Total No Spam Score: " << totalNoSpamScore << std::endl;
-            
-            Prediction prediction = { 
-                totalSpamScore > totalNoSpamScore ? totalSpamScore : totalNoSpamScore, 
-                totalSpamScore > totalNoSpamScore ? CLASSIFICATION::SPAM : CLASSIFICATION::NO_SPAM, 
-                totalSpamScore > totalNoSpamScore ? "This email is most likely a spam" : "This email is most likely not a spam"
-            };
-
+            //make prediction
+            Prediction prediction;
+            if (spamScore > noSpamScore) {
+                //reverse function of log is exponential (e^x) and then normalize by diving the sum of the scores
+                double spam_probability = std::exp(spamScore) / (std::exp(spamScore) + std::exp(noSpamScore));
+                
+                prediction = { spam_probability, CLASSIFICATION::SPAM, "This email is most likely a spam" };
+            }
+            else {
+                //reverse function of log is exponential (e^x) and then normalize by diving the sum of the scores
+                double no_spam_probability = std::exp(noSpamScore) / (std::exp(spamScore) + std::exp(noSpamScore));
+                
+                prediction = { no_spam_probability, CLASSIFICATION::NO_SPAM, "This email is most likely not a spam" };
+            }
             return prediction;
         }
 };
 
 ostream &operator<<(ostream &stream, Prediction &prediction) {
-    stream << prediction.message << " with a propabillity of: " << prediction.propabillity << endl;
+    stream << prediction.message << " with a propabillity of: " << prediction.probability << endl;
     return stream;
 }
