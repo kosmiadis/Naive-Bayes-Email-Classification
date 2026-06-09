@@ -14,18 +14,47 @@ The goal of this simple implementation is to understand the Naive-Bayes algorith
 
 ## Implementation
 
-- The first part consists of defining the data the model expects. 
+- The first phase consists of defining the data the model expects and the data it outputs.
     The SPAM or NO_SPAM classification tag is handle via an enum as follows:
     ```
-        enum CLASSIFICATION {
-            SPAM,
-            NO_SPAM
-        };
+    enum CLASSIFICATION {
+        SPAM,
+        NO_SPAM
+    };
     ```
-    There are two main different structs for this purpose:
-        1. TrainingData --> The data the model ingests and gets trained
-            
-        2. PredictionData --> The user input to the model to make a prediction
+    There are two main different structs for this purpose, the TrainingData and the PredictionData:
+    ```
 
-To keep it simple I just kept the content of the email as the only parameter from which words extraction will be made. Those words then will be processed through a naive bayes implementation using Baye's Theorem. 
+    struct TrainingData {
+        //the content of the email
+        std::string content;
+        //SPAM, NO_SPAM
+        CLASSIFICATION belong_class;
+    };
+
+    struct PredictionData {
+        //the content of the email
+        std::string content;
+    };
+
+    ```
+
+    The data that the model takes as input in order to make a classification prediction is the Prediction struct:
+    ```
+    struct Prediction {
+        //classification probability
+        double probability;
+        //SPAM, NO_SPAM
+        CLASSIFICATION classification;
+        //a result message
+        string message;
+    };
+    ```
+
+- The second phase consists of creating the methods for handling Naive-Bayes Model:
+    1. fit(const std::vector<TrainingData> &dataset) (Here is where training happens)
+    2. predict(const PredictionData &toPredictData) (The model predicts the classification)
+    3. load(const std::string &csv_filename) (Alternative way to load data from a csv, method automatically calls fit so it works the same as fit)
+
+- The third phase consists of implementing the mathematical logic for classification using Baye's Theorem. I will not dive into it as there are many resources from which you can learn about it. (Basic Probabilities Knowledge is required)
 
