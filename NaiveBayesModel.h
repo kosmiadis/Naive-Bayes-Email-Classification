@@ -156,7 +156,7 @@ class NaiveBayesModel {
 
             std::string line;
             CLASSIFICATION classification;
-            
+
             if (datasetFileStream.is_open()) {
 
                 while(getline(datasetFileStream, line)) {
