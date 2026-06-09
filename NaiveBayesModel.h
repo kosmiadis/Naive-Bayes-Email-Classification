@@ -45,17 +45,6 @@ class NaiveBayesModel {
         std::map<std::string, int> no_spam_vocabulary;
         long no_spam_vocabulary_size;
         long no_spam_vocabulary_words_count;
-    public:
-
-        NaiveBayesModel() {
-            this->spam_emails_count = 0;
-            this->no_spam_emails_count = 0;
-            this->dataset_size = 0;
-            this->spam_vocabulary_size = 0;
-            this->no_spam_vocabulary_size = 0;
-            this->spam_vocabulary_words_count = -1;
-            this->no_spam_vocabulary_words_count = -1;
-        }
 
         //tokenize removes punctuation transforms to lowercase and splits words
         //the output is a vector of strings (words) so that the modal can process them with no problem
@@ -147,6 +136,21 @@ class NaiveBayesModel {
             return (double) (token_freq + 1) / (getNoSpamTotalWordsCount() + (spam_vocabulary.size() + no_spam_vocabulary.size()));
         }
 
+    public:
+        NaiveBayesModel() {
+            this->spam_emails_count = 0;
+            this->no_spam_emails_count = 0;
+            this->dataset_size = 0;
+            this->spam_vocabulary_size = 0;
+            this->no_spam_vocabulary_size = 0;
+            this->spam_vocabulary_words_count = -1;
+            this->no_spam_vocabulary_words_count = -1;
+        }
+
+        //method to load csv file with data in order to train the model
+        void load_data(const std::string &csv_filename) {
+            
+        }
 
         //train the model (fit data in the model)
         void fit (const std::vector<TrainingData> &dataset) {
