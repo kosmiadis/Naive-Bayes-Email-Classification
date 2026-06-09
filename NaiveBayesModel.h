@@ -5,6 +5,7 @@
 #include <iostream>
 #include <regex>
 #include <map>
+#include <fstream>
 
 //define the spam or no-spam classification as enum
 enum CLASSIFICATION {
@@ -34,9 +35,9 @@ class NaiveBayesModel {
     private:
         //the dataset on top of which the model will make predictions, augmented via training phase
         std::vector<TrainingData> training_dataset;
-        int spam_emails_count;
-        int no_spam_emails_count;
-        int dataset_size;
+        long spam_emails_count;
+        long no_spam_emails_count;
+        long dataset_size;
         
         std::map<std::string, int> spam_vocabulary;
         long spam_vocabulary_size;
@@ -148,8 +149,44 @@ class NaiveBayesModel {
         }
 
         //method to load csv file with data in order to train the model
-        void load_data(const std::string &csv_filename) {
+        void load_and_fit(const std::string &csv_filename) {
+            std::vector<TrainingData> training_dataset;
+
+            ifstream datasetFileStream(csv_filename);
+
+            std::string line;
+            CLASSIFICATION classification;
+
+
+            // IMPORTANT BUG: when reading file this way stops at the very first comma instead try to
+            // stop at the last comma so that the content is read properly and is not being characterized as SPAM or NO_SPAM
+            // when it's the opposite
             
+            if (datasetFileStream.is_open()) {
+
+                while(getline(datasetFileStream, line)) {
+                    stringstream ss(line);
+                    string content;
+                    string c;
+
+                    getline(ss, content, ',');
+                    getline(ss, c);
+
+                    if (c == "NO_SPAM") {
+                        classification = CLASSIFICATION::NO_SPAM;
+                    }
+                    else {
+                        classification = CLASSIFICATION::SPAM;
+                    }
+
+                    TrainingData t_d = { content, classification};
+                    training_dataset.push_back(t_d);
+                }
+            }
+
+            datasetFileStream.close();
+
+            this->fit(training_dataset);
         }
 
         //train the model (fit data in the model)
