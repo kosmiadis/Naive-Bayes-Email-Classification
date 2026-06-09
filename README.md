@@ -1,4 +1,4 @@
-# Naive Bayes Implementation (Machine Learning) Author: ***Vagelis Kosmiadis***
+# Naive Bayes Implementation (Machine Learning) on Email Filtering (SPAM/NO-SPAM) Author: ***Vagelis Kosmiadis***
 
 This is the implementation of Naive Bayes Machine Learning Classification Algorithm as a personal project which can also be used in commercial and open source applications as it is licensed under the MIT open-source license.
 
