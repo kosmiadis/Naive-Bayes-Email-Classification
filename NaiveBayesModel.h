@@ -156,21 +156,18 @@ class NaiveBayesModel {
 
             std::string line;
             CLASSIFICATION classification;
-
-
-            // IMPORTANT BUG: when reading file this way stops at the very first comma instead try to
-            // stop at the last comma so that the content is read properly and is not being characterized as SPAM or NO_SPAM
-            // when it's the opposite
             
             if (datasetFileStream.is_open()) {
 
                 while(getline(datasetFileStream, line)) {
-                    stringstream ss(line);
+                    
                     string content;
                     string c;
 
-                    getline(ss, content, ',');
-                    getline(ss, c);
+                    size_t pos = line.find_last_of(',');
+                    content = line.substr(0, pos);
+                        
+                    c = line.substr(pos+1);
 
                     if (c == "NO_SPAM") {
                         classification = CLASSIFICATION::NO_SPAM;
