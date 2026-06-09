@@ -54,7 +54,7 @@ The goal of this simple implementation is to understand the Naive-Bayes algorith
 - The second phase consists of creating the methods for handling Naive-Bayes Model:
     1. fit(const std::vector<TrainingData> &dataset) (Here is where training happens)
     2. predict(const PredictionData &toPredictData) (The model predicts the classification)
-    3. load(const std::string &csv_filename) (Alternative way to load data from a csv, method automatically calls fit so it works the same as fit)
+    3. load_and_fit(const std::string &csv_filename) (Alternative way to load data from a csv, method automatically calls fit so it works the same as fit)
 
 - The third phase consists of implementing the mathematical logic for classification using Baye's Theorem. I will not dive into it as there are many resources from which you can learn about it. (Basic Probabilities Knowledge is required)
 
