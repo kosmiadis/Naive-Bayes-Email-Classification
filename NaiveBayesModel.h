@@ -31,6 +31,7 @@ struct Prediction {
     string message;
 };
 
+
 class NaiveBayesModel {
     private:
         //the dataset on top of which the model will make predictions, augmented via training phase
@@ -61,8 +62,7 @@ class NaiveBayesModel {
                 str = std::regex_replace(content, punctuation_regex, "");
             } catch (const std::regex_error& error) {
                 passedRegex = false;
-                Error err("Something went wrong while removing punctuation");
-                std::cout << err << std::endl;
+                throw Error("Something went wrong while cleaning content from punctuation and other symbols");
             }
             
             //convert str to lowercase
@@ -158,9 +158,7 @@ class NaiveBayesModel {
             CLASSIFICATION classification;
 
             if (datasetFileStream.is_open()) {
-
                 while(getline(datasetFileStream, line)) {
-                    
                     string content;
                     string c;
 
@@ -180,9 +178,11 @@ class NaiveBayesModel {
                     training_dataset.push_back(t_d);
                 }
             }
+            else {
+                throw Error("Training data were not loaded. Either the file could not open or it does not exist.");
+            }
 
             datasetFileStream.close();
-
             this->fit(training_dataset);
         }
 
@@ -218,6 +218,16 @@ class NaiveBayesModel {
 
         //make prediction
         Prediction predict (const PredictionData &toPredictData) {
+            //check if there is any dataset fed into the model first
+            if (this->dataset_size == 0) {
+                throw Error("Empty dataset, please train the model first");
+            }
+
+            //check if content of the predictData object is empty
+            if (toPredictData.content == "") {
+                throw Error("Content of email cannot be empty");
+            }
+
             //calculate P(spam) & P(no-spam)
             double spam_pos = (double) this->spam_emails_count / this->dataset_size;
             double no_spam_pos = (double) this->no_spam_emails_count / this->dataset_size;
@@ -247,7 +257,6 @@ class NaiveBayesModel {
             else {
                 //reverse function of log is exponential (e^x) and then normalize by diving the sum of the scores
                 double no_spam_probability = std::exp(noSpamScore) / (std::exp(spamScore) + std::exp(noSpamScore));
-                
                 prediction = { no_spam_probability, CLASSIFICATION::NO_SPAM, "This email is most likely not a spam" };
             }
             return prediction;
